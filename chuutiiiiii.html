@@ -68,6 +68,16 @@
   .stage.open .sign{animation:fade 1.2s 3s forwards}
   .sign::before,.sign::after{content:"";width:34px;height:1px;background:rgba(255,255,255,.3)}
 
+  .music{position:absolute;z-index:3;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;width:44px;height:44px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.45);background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:0}
+  .stage.open .music{display:flex}
+  .music i{display:block;width:3px;height:6px;background:#fff;border-radius:2px;transform-origin:center}
+  .music.on i{animation:eq 1s ease-in-out infinite}
+  .music.on i:nth-child(2){animation-delay:.2s}.music.on i:nth-child(3){animation-delay:.4s}
+  @keyframes eq{0%,100%{height:6px}50%{height:18px}}
+  .music:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+
   .fly{position:fixed;width:26px;fill:var(--red);pointer-events:none;z-index:9;animation:up 1.8s ease-out forwards;filter:drop-shadow(0 0 8px rgba(225,6,0,.6))}
   @keyframes up{from{opacity:1;transform:translate(-50%,-50%) scale(.5)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),-260px) scale(1.2)}}
 
@@ -86,6 +96,9 @@
     <p class="love">I love you, today and always.</p>
     <p class="sign">Your loving Chuuti Putha</p>
   </div>
+
+  <div id="yt" style="position:fixed;left:0;bottom:0;width:200px;height:200px;opacity:.01;pointer-events:none;z-index:-1"></div>
+  <button class="music" id="music" aria-label="Play or pause music"><i></i><i></i><i></i></button>
 
   <main class="intro" id="intro">
     <div class="intro-in">
@@ -113,9 +126,32 @@
   function show(){msg.textContent=lines[n%lines.length];msg.classList.add('on');n++;
     setTimeout(()=>{msg.classList.remove('on');setTimeout(show,900)},4600)}
 
+  const VID='9JwmrZCjS0M', mus=document.getElementById('music');
+  let yt=null, apiReady=false;
+  const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
+  window.onYouTubeIframeAPIReady=()=>{apiReady=true};
+  function startSong(){
+    if(!apiReady){setTimeout(startSong,300);return}
+    yt=new YT.Player('yt',{videoId:VID,width:'200',height:'200',
+      playerVars:{autoplay:1,loop:1,playlist:VID,controls:0,playsinline:1,rel:0,modestbranding:1},
+      events:{
+        onReady:e=>{e.target.setVolume(0);e.target.playVideo();let v=0;
+          const f=setInterval(()=>{v=Math.min(85,v+3);e.target.setVolume(v);if(v>=85)clearInterval(f)},120)},
+        onStateChange:e=>{
+          if(e.data===1)mus.classList.add('on');
+          else if(e.data===2)mus.classList.remove('on');
+          else if(e.data===0)e.target.playVideo();
+        },
+        onError:()=>{mus.style.display='none'}
+      }});
+  }
+  mus.addEventListener('click',e=>{e.stopPropagation();
+    if(!yt||!yt.getPlayerState)return;
+    if(yt.getPlayerState()===1)yt.pauseVideo();else yt.playVideo();});
   let opened=false;
   document.getElementById('open').addEventListener('click',e=>{
     e.stopPropagation();opened=true;
+    startSong();
     document.getElementById('intro').classList.add('clear');
     setTimeout(()=>stage.classList.add('open'),500);
     setTimeout(show,2600);
